@@ -13,3 +13,6 @@ onFlushEntity 处理脏数据判断执行的方法
 isUpdateNecessary 判断是否有脏数据
 scheduleUpdate 如果有脏数据执行更新(其实是添加了一个更新的操作,在最后一起提交)
 dirtyCheck 校验是否有脏数据
+
+EntityUpdateAction
+更新事件,处理更新任务
