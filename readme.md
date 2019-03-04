@@ -58,3 +58,31 @@ http://howto-heaven.blogspot.jp/2011/01/how-to-install-mp4box-on-centos.html
   ffmpeg -i "concat:1.ts|2.ts" -acodec copy -vcodec copy -absf aac_adtstoasc output.mp4
 转自：http://blog.eryue.me/?p=135
 ```
+
+## maven 打包的坑
+maven打包时候资源文件 word 格式损毁
+代码中读取会显示
+The document appears to be corrupted and cannot be loaded
+ZIP file not opening
+pom文件加上
+```
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-resources-plugin</artifactId>
+  <configuration>
+    <nonFilteredFileExtensions>
+      <nonFilteredFileExtension>doc</nonFilteredFileExtension>
+      <nonFilteredFileExtension>docx</nonFilteredFileExtension>
+      <nonFilteredFileExtension>xlsx</nonFilteredFileExtension>
+      <nonFilteredFileExtension>xls</nonFilteredFileExtension>
+      <nonFilteredFileExtension>zip</nonFilteredFileExtension>
+      <nonFilteredFileExtension>cer</nonFilteredFileExtension>
+      <nonFilteredFileExtension>pfx</nonFilteredFileExtension>
+      <nonFilteredFileExtension>py</nonFilteredFileExtension>
+      <nonFilteredFileExtension>keystore</nonFilteredFileExtension>
+    </nonFilteredFileExtensions>
+  </configuration>
+</plugin>
+```
+就好了, 在使用aspose-words 发现的,以为是版本的bug结果是maven导致的
+
