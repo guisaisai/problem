@@ -86,3 +86,28 @@ pom文件加上
 ```
 就好了, 在使用aspose-words 发现的,以为是版本的bug结果是maven导致的
 
+## springboot @EnableWebMvc 导致404 swagger/静态资源无法访问
+
+原因  http://hengyunabc.github.io/spring-boot-enablewebmvc-static-404/
+
+解决办法  https://github.com/battcn/swagger-spring-boot/issues/3
+
+简单来说配置了@EnabelWebMvc 会让springboot默认配置的静态资源失效 需要手动配置
+
+```
+
+    /**
+     * 过滤Swagger2的静态资源
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**").addResourceLocations("classpath:/static/");
+        registry.addResourceHandler("swagger-ui.html").addResourceLocations("classpath:/META-INF/resources/");
+        registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+        super.addResourceHandlers(registry);
+    }
+```
+
+
+
+
