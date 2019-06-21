@@ -109,5 +109,103 @@ pom文件加上
 ```
 
 
+## springboot @Value 写上默认值后原来配置文件里的值不生效
+直接公布答案,环境用的是springboot 在springboot环境里依赖其他其他三方开源的代码需要手动引入xml
+```
+
+//在启动类直接引入xml
+@ImportResource({"classpath:xxx.xml"})
+
+//然后xml里需要加载资源文件用的是下面的方式
+<bean id="xxxx" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	<property name="ignoreUnresolvablePlaceholders" value="true"></property>
+	<property name="location">
+		<value>classpath:xxx.properties</value>
+	</property>
+</bean>
+
+```
+
+这种方式会略微改变springboot加载properties的方式导致的问题
+
+### 解决办法
+
+在启动类直接,还让springboot 用自己的方式加载properties
+
+@PropertySource("classpath:xxx.properties")
+
+下面看源码:
+
+//xml里配置PropertyPlaceholderConfigurer后会走的方法
+
+PropertyPlaceholderHelper
+
+```
+
+protected String parseStringValue(String value, PropertyPlaceholderHelper.PlaceholderResolver placeholderResolver, Set<String> visitedPlaceholders) {
+        ...
+        placeholder = this.parseStringValue(placeholder, placeholderResolver, visitedPlaceholders);
+        String propVal = placeholderResolver.resolvePlaceholder(placeholder);
+        if (propVal == null && this.valueSeparator != null) {
+            int separatorIndex = placeholder.indexOf(this.valueSeparator);
+            if (separatorIndex != -1) {
+                String actualPlaceholder = placeholder.substring(0, separatorIndex);
+                String defaultValue = placeholder.substring(separatorIndex + this.valueSeparator.length());
+                propVal = placeholderResolver.resolvePlaceholder(actualPlaceholder);
+                //注意这段代码 进来的时候如果有默认值就赋值了
+                if (propVal == null) {
+                    propVal = defaultValue;
+                }
+            }
+        }
+
+        if (propVal != null) {
+            propVal = this.parseStringValue(propVal, placeholderResolver, visitedPlaceholders);
+            result.replace(startIndex, endIndex + this.placeholderSuffix.length(), propVal);
+            if (logger.isTraceEnabled()) {
+                logger.trace("Resolved placeholder '" + placeholder + "'");
+            }
+
+            startIndex = result.indexOf(this.placeholderPrefix, startIndex + propVal.length());
+        } else {
+            if (!this.ignoreUnresolvablePlaceholders) {
+                throw new IllegalArgumentException("Could not resolve placeholder '" + placeholder + "' in value \"" + value + "\"");
+            }
+
+            startIndex = result.indexOf(this.placeholderPrefix, endIndex + this.placeholderSuffix.length());
+        }
+
+        ...
+
+```
+
+先继续往瞎看
+
+往上面追了两层
+
+AbstractBeanFactory
+
+```
+
+public String resolveEmbeddedValue(@Nullable String value) {
+	if (value == null) {
+		return null;
+	}
+	String result = value;
+	//注意这行代码其中embeddedValueResolvers 就是多个PlaceholderResolvingStringValueResolver
+	for (StringValueResolver resolver : this.embeddedValueResolvers) {
+		result = resolver.resolveStringValue(result);
+		if (result == null) {
+			return null;
+		}
+	}
+	return result;
+}
+
+```
+
+原因: 在springboot 中 用xml方式配置 PropertyPlaceholderConfigurer 会导致 this.embeddedValueResolvers 多出一个 PropertyPlaceholderConfigurer 就是xml中配置的这个,这里面加载的资源文件只是xml中引入的资源文件xxx.properties  这时候项目中其他的 @Value注入的逻辑都会走this.embeddedValueResolvers 这个list便利解析注入属性 第一段代码中中的defaultValue 就出场了,直接附上默认值了
+结论: springboot 和 原来的xml注入 PropertyPlaceholderConfigurer 方式有冲突主要表现在有默认值会直在第一个embeddedValueResolver 如果没在资源文件中找到目标值会直接把默认值给val这时候后面的embeddedValueResolver都不会执行了
+
 
 
